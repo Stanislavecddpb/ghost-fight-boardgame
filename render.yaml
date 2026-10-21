@@ -1,0 +1,12 @@
+services:
+  - type: web
+    name: ghost-fight
+    runtime: node
+    plan: free
+    # Ставим зависимости (включая dev — нужны typescript/vite) и собираем движок, сервер и клиент.
+    buildCommand: npm install --include=dev && npm run build
+    # Сервер (Koa + socket.io через tsx) раздаёт клиент и держит сокеты.
+    startCommand: npm start
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
