@@ -131,6 +131,35 @@ describe('победа', () => {
     expect(g.score).toEqual({ '0': 1, '1': 0 });
   });
 
+  it('доброе, ступив на угол соперника, сразу уходит — победа', () => {
+    const g = midgame({ '0-0': cell(1, 0), '1-0': cell(3, 3) });
+    doMove(g, '0', '0-0', cell(0, 0));
+    expect([g.winner, g.reason]).toEqual(['0', 'escaped']);
+    expect(ghost(g, '0-0')).toMatchObject({ pos: null, escaped: true });
+  });
+
+  it('доброе съело на угле чужое привидение — тоже победа', () => {
+    const g = midgame({ '0-0': cell(0, 1), '1-0': cell(0, 0), '1-1': cell(3, 3) });
+    doMove(g, '0', '0-0', cell(0, 0));
+    expect([g.winner, g.reason]).toEqual(['0', 'escaped']);
+    expect(ghost(g, '1-0').captured).toBe(true);
+  });
+
+  it('злое на угле соперника не уходит, свой угол не выход', () => {
+    const g = midgame({ '0-4': cell(1, 5), '0-0': cell(4, 0), '1-0': cell(3, 3) });
+    doMove(g, '0', '0-4', cell(0, 5));
+    expect(g.winner).toBeNull();
+    expect(ghost(g, '0-4').pos).toBe(cell(0, 5));
+    doMove(g, '0', '0-0', cell(5, 0));
+    expect(g.winner).toBeNull();
+  });
+
+  it('съел на угле четвёртое злое — проигрыш важнее выхода', () => {
+    const g = midgame({ '0-0': cell(0, 1), '1-4': cell(0, 0), '1-0': cell(3, 3) }, ['1-5', '1-6', '1-7']);
+    doMove(g, '0', '0-0', cell(0, 0));
+    expect([g.winner, g.reason]).toEqual(['1', 'gave-evil']);
+  });
+
   it('через свой угол или злым — нельзя', () => {
     const g = midgame({ '0-0': cell(5, 0), '0-4': cell(0, 5), '1-0': cell(2, 2) });
     expect(doEscape(g, '0', '0-0')).toBe('INVALID_MOVE');
@@ -176,10 +205,10 @@ describe('матч из нескольких раундов', () => {
     wait();
     for (let i = 0; i < 4; i++) {
       c.moves.move(id, ghost(G(c), id).pos! + fwd);
-      wait();
+      if (i < 3) wait();
     }
-    expect(ghost(G(c), id).pos).toBe(first === '0' ? cell(0, 0) : cell(5, 0));
-    c.moves.escape(id);
+    // Ступило на угол-выход — раунд выигран сразу.
+    expect(ghost(G(c), id)).toMatchObject({ pos: null, escaped: true });
     let s = watcher.getState()!;
     expect(s.ctx.phase).toBe('over');
     expect(s.ctx.gameover).toBeUndefined();

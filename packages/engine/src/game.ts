@@ -85,7 +85,10 @@ export function targets(G: GFState, ghost: Ghost): number[] {
     .filter((p): p is number => p !== null && ghostAt(G, p)?.owner !== ghost.owner);
 }
 
-/** Может ли привидение выйти с поля: доброе на угле-выходе. */
+/**
+ * Может ли привидение выйти с поля: доброе на угле-выходе. Обычно выход случается сам — доброе,
+ * ступив на угол, сразу уходит (см. ход move); отдельный ход escape остался для партий, сохранённых раньше.
+ */
 export const canEscape = (ghost: Ghost) =>
   ghost.kind === 'good' && ghost.pos !== null && exitsOf(ghost.owner).includes(ghost.pos);
 
@@ -211,6 +214,15 @@ export const GhostFightGame: Game<GFState> = {
             log(G, ctx, p, victim
               ? `${cellName(from)} → ${cellName(to)}, съедено ${victim.kind === 'good' ? 'доброе' : 'злое'} привидение`
               : `${cellName(from)} → ${cellName(to)}`);
+            // Доброе привидение на угле-выходе сразу уходит с поля — победа без лишнего хода.
+            // Но если этим же ходом съедено четвёртое злое, раньше срабатывает проигрыш.
+            if (canEscape(ghost) && eaten(G, other(p), 'evil') < 4) {
+              ghost.pos = null;
+              ghost.escaped = true;
+              G.lastMove.to = null;
+              log(G, ctx, p, `доброе привидение ускользнуло через ${cellName(to)}`);
+              return finish(G, p, 'escaped');
+            }
             checkWin(G, p);
             events.endTurn();
           },
