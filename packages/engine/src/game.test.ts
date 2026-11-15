@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { Client } from 'boardgame.io/client';
 import { Local } from 'boardgame.io/multiplayer';
-import { GhostFightGame, cell, colOf, startCells, type GFState, type Ghost } from './game';
+import { GhostFightGame, cell, colOf, startCells, type GFState, type Ghost, matchWinner } from './game';
 
 /** Партия через Local-мастер: каждый клиент получает состояние, отфильтрованное playerView. */
 let matchNo = 0;
@@ -225,5 +225,14 @@ describe('матч из нескольких раундов', () => {
     expect(g.score[first as '0']).toBe(1);
     // И снова скрытая информация.
     expect(G(o).ghosts.filter((x) => x.owner === first).every((x) => x.kind === null)).toBe(true);
+  });
+});
+
+describe('матч до двух побед', () => {
+  it('две победы — партия окончена, итог с победителем и счётом; новый раунд не начать', () => {
+    const base = { ghosts: [], ready: { '0': true, '1': true }, first: '0', lastMove: null, log: [], winner: '0', reason: 'ate-good', round: 2, history: [] } as unknown as GFState;
+    expect(GhostFightGame.endIf!({ G: { ...base, score: { '0': 1, '1': 1 } } } as never)).toBeUndefined();
+    expect(GhostFightGame.endIf!({ G: { ...base, round: 3, score: { '0': 2, '1': 1 } } } as never)).toEqual({ winner: '0', winners: ['0'], scores: { '0': 2, '1': 1 } });
+    expect(matchWinner({ ...base, score: { '0': 0, '1': 2 } })).toBe('1');
   });
 });

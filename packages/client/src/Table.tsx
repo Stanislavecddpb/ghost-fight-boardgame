@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { BoardProps } from 'boardgame.io/react';
 import {
-  SIZE, cell, other, isPlayer, targets, canEscape, exitsOf, eaten, startCells,
+  SIZE, cell, other, isPlayer, targets, canEscape, exitsOf, eaten, startCells, matchWinner, MATCH_WINS,
   type GFState, type Ghost, type Kind, type PlayerID, type WinReason,
 } from '@gf/engine';
 import { GhostIcon, OWNER_COLOR, OWNER_NAME } from './Ghost';
@@ -200,12 +200,23 @@ export function Table({ G, ctx, moves, playerID, matchData }: BoardProps<GFState
     );
   } else {
     const w = G.winner!;
-    status = (
+    const champion = matchWinner(G);
+    status = champion ? (
+      <>
+        <h3 className={champion === me ? 'win' : me ? 'lose' : ''}>
+          {champion === me ? 'Вы выиграли матч!' : me ? 'Матч проигран' : `Матч выигрывает ${nameOf(champion)}`}
+        </h3>
+        <p>
+          Раунд {G.round}: {REASON[G.reason!]}. Счёт {G.score['0']} : {G.score['1']} — матч до {MATCH_WINS} побед окончен,
+          результат уйдёт в рейтинг.
+        </p>
+      </>
+    ) : (
       <>
         <h3 className={w === me ? 'win' : me ? 'lose' : ''}>
           {w === me ? 'Вы победили!' : me ? 'Вы проиграли' : `Побеждает ${nameOf(w)}`}
         </h3>
-        <p>Раунд {G.round}: {REASON[G.reason!]}. Все цвета открыты.</p>
+        <p>Раунд {G.round}: {REASON[G.reason!]}. Все цвета открыты. Матч — до {MATCH_WINS} побед.</p>
         {me ? (
           <div className="actions">
             <button className="btn" onClick={() => moves.newRound()}>Новый раунд</button>

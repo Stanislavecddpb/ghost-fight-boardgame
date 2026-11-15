@@ -100,6 +100,14 @@ function hasMoves(G: GFState, player: PlayerID) {
   return onBoard(G, player).some((g) => targets(G, g).length > 0 || canEscape(g));
 }
 
+/** Матч до двух побед: потом партия заканчивается и платформа записывает итог в рейтинг. */
+export const MATCH_WINS = 2;
+
+/** Победитель матча, если кто-то уже набрал MATCH_WINS побед. */
+export function matchWinner(G: GFState): PlayerID | null {
+  return PLAYERS.find((p) => G.score[p] >= MATCH_WINS) ?? null;
+}
+
 function finish(G: GFState, winner: PlayerID, reason: WinReason) {
   G.winner = winner;
   G.reason = reason;
@@ -139,6 +147,12 @@ export const GhostFightGame: Game<GFState> = {
   name: GAME_ID,
   minPlayers: 2,
   maxPlayers: 2,
+
+  // Матч выигран — партия окончена: победитель и счёт по раундам для рейтинга платформы.
+  endIf: ({ G }) => {
+    const w = matchWinner(G);
+    return w === null ? undefined : { winner: w, winners: [w], scores: { ...G.score } };
+  },
 
   setup: ({ random }) => ({
     ghosts: freshGhosts(),
@@ -250,7 +264,7 @@ export const GhostFightGame: Game<GFState> = {
       turn: { activePlayers: ActivePlayers.ALL },
       moves: {
         newRound: ({ G, ctx, playerID }) => {
-          if (G.winner === null) return INVALID_MOVE;
+          if (G.winner === null || matchWinner(G) !== null) return INVALID_MOVE;
           G.round += 1;
           G.first = other(G.first); // первый ход по очереди
           G.ghosts = freshGhosts();
